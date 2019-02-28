@@ -51,38 +51,194 @@ public class Field : MonoBehaviour
                 cell.OnFillCell += OnFillCell;
             }
     }
-
+    
     private void OnFillCell(CellTrigger cell)
     {
-        Vector2 start = cell.Index;
+        // Граф. Внешний список - столбцы вершин. Внутренний список - в каждом столбце выдать список всех вершин. Каждая вершина - связанный список без индексов, т.е. фактически путь
+        List<List<LinkedCellList>> graph = new List<List<LinkedCellList>>();
 
-        List<Vector2> usedCells = new List<Vector2>();
-        usedCells.Add(cell.Index);
+        LinkedCellList start = new LinkedCellList();
+        start.Cell = cell;
+        start.LastCell = null;
+        FindAndSetNextPoints(start);
 
-        
-                                
-        var res = GetNearPoints(cell);
+        List<LinkedCellList> list = new List<LinkedCellList>();
+        list.Add(start);
 
-        while (true)
+        graph.Add(list);
+
+        int breakCount = 100;
+
+        List<LinkedCellList> targets = new List<LinkedCellList>();
+
+        bool hasNext = true;
+        while (hasNext)
         {
+            List<LinkedCellList> nextList = new List<LinkedCellList>();
 
+            //print("List");
+            for (int i = 0; i < list.Count; i++)
+            {
+                LinkedCellList cellPath = list[i];
+                FindAndSetNextPoints(cellPath);
+                if (cellPath.NextCells.Count > 0)
+                {
+                    if (Contains(cellPath.NextCells, start))
+                    {
+                        //print("Contains");
+                        for (int j = 0; j < cellPath.NextCells.Count; j++)
+                        {
+                            if (cellPath.NextCells[j].Cell == start.Cell)
+                            {
+                                targets.Add(cellPath.NextCells[j]);
+                                cellPath.NextCells.RemoveAt(j);
+                                j--;
+                            }
+
+                        }
+                    }
+
+                    //print("Add");
+                    foreach (var item in cellPath.NextCells)
+                    {
+                        nextList.Add(item);
+                    }
+                    //nextList.Add(cellPath);
+                }
+            }
+            
+            if (nextList.Count > 0)
+            {
+                list = nextList;
+            }
+            else
+            {
+                hasNext = false;
+            }
+
+
+            breakCount--;
+            if (breakCount <= 0)
+            {
+                print("Finish, but not good");
+                break;
+            }
         }
+
+        if (targets.Count > 0)
+        {
+            print("Что-то найдено, перекрестимся наудачу И...");
+            GameSession.Instance.CurrentSpaceRender.Draw(FindContour(targets[0], start));
+        }
+
+
+        //List<LinkedCellList> list = new List<LinkedCellList>();
+
+        //LinkedCellList graph = new LinkedCellList();
+        //graph.Cell = cell;
+        //graph.LastCell = null;
+
+        //list.Add(graph);
+
+        //FindAndSetNextPoints(graph);
+
+        //for (int i = 0; i < graph.NextCells.Count; i++)
+        //{
+
+        //}
+
+
+            /*
+
+
+        LinkedCellList start = new LinkedCellList();
+        start.Cell = cell;
+        start.LastCell = null;
+
+        print("Start = " + start.Cell.Index);
+                
+        LinkedCellList list = start;
+                
+        FindAndSetNextPoints(list);
+
+        print("l = " + list.Cell.Index);
+
+        // Нужен список из LinkedCellList, т.е. фактически список путей графа
+
+        foreach (var item in list.NextCells)
+        {
+            list = item;
+
+            FindAndSetNextPoints(list);
+
+            print(string.Format("Current = {0}, Last = {1}", list.Cell.Index, list.LastCell.Cell.Index));
+            foreach (var item2 in list.NextCells)
+            {
+                print(item2.Cell.Index);
+            }
+
+            if (Contains(list.NextCells, start))
+            {
+                GameSession.Instance.CurrentSpaceRender.Draw(FindContour(list, start));
+                print("Find contour");
+                break;
+            }
+                       
+            
+        }
+                        
+            //break;
+
+        //}
+        */
     }
 
-    private List<CellTrigger> GetNearPoints(CellTrigger cell)
+    private List<CellTrigger> FindContour(LinkedCellList current, LinkedCellList start)
     {
-        int minX = cell.Index.x > 0 ? cell.Index.x - 1 : 0;
-        int maxX = cell.Index.x < _fieldSize.x - 1 ? cell.Index.x + 1 : _fieldSize.x - 1;
-        int minY = cell.Index.y > 0 ? cell.Index.y - 1 : 0;
-        int maxY = cell.Index.y < _fieldSize.y - 1 ? cell.Index.y + 1 : _fieldSize.y - 1;
-        
-        List<CellTrigger> results = new List<CellTrigger>();
+        List<CellTrigger> result = new List<CellTrigger>();
 
+        result.Add(start.Cell);
+        
+        while (current != start)
+        {
+            result.Add(current.Cell);
+            current = current.LastCell;
+        }
+
+        return result;
+    }
+
+    private bool Contains (List<LinkedCellList> list, LinkedCellList target)
+    {
+        foreach (var item in list)
+        {
+            if (item.Cell == target.Cell)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void FindAndSetNextPoints(LinkedCellList linkedListItem)
+    {
+        int minX = linkedListItem.Cell.Index.x > 0 ? linkedListItem.Cell.Index.x - 1 : 0;
+        int maxX = linkedListItem.Cell.Index.x < _fieldSize.x - 1 ? linkedListItem.Cell.Index.x + 1 : _fieldSize.x - 1;
+        int minY = linkedListItem.Cell.Index.y > 0 ? linkedListItem.Cell.Index.y - 1 : 0;
+        int maxY = linkedListItem.Cell.Index.y < _fieldSize.y - 1 ? linkedListItem.Cell.Index.y + 1 : _fieldSize.y - 1;
+                
         for (int j = minY; j <= maxY; j++)
             for (int i = minX; i <= maxX; i++)
-                if (_field[i, j].FillState == cell.FillState && !(i == cell.Index.x && j == cell.Index.y))
-                    results.Add(_field[i, j]);
+                if (_field[i, j].FillState == linkedListItem.Cell.FillState && linkedListItem.Cell != _field[i, j])
+                {
+                    if (linkedListItem.LastCell == null || linkedListItem.LastCell.Cell != _field[i, j])
+                    {
+                        LinkedCellList item = new LinkedCellList();
+                        item.Cell = _field[i, j];
+                        item.LastCell = linkedListItem;
 
-        return results;
+                        linkedListItem.NextCells.Add(item);
+                        //print("near " + item.Cell.Index);
+                    }
+                }
     }
 }

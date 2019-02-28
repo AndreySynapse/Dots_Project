@@ -11,6 +11,25 @@ public class DotsSpaceRender : MonoBehaviour
     [SerializeField] private float _UVScale;
 
     private List<Vector2> _contour;
+    private float _zPosition;
+
+    public void Draw(List<CellTrigger> space)
+    {
+        GameSession.Instance.CurrentZBuffer.ChangeValue();
+
+        _contour = new List<Vector2>();
+
+        foreach (CellTrigger item in space)
+        {
+            _contour.Add(item.transform.position);
+            item.Unscribe();
+        }
+
+        _zPosition = space[0].transform.position.z;
+
+        DrawContour();
+        CreateMeshSpace();
+    }
 
     public void Draw(List<Vector2> points)
     {
@@ -40,14 +59,18 @@ public class DotsSpaceRender : MonoBehaviour
 
         var triangleNetMesh = (TriangleNetMesh)poly.Triangulate();
 
-        GameObject go = new GameObject("Generated space");
-        var mf = go.AddComponent<MeshFilter>();
+        GameObject space = new GameObject("Generated space");
+        var mf = space.AddComponent<MeshFilter>();
         var mesh = triangleNetMesh.GenerateUnityMesh();
         
         mesh.uv = GenerateUv(mesh.vertices);
         mf.mesh = mesh;
-        var mr = go.AddComponent<MeshRenderer>();
+        var mr = space.AddComponent<MeshRenderer>();
         mr.sharedMaterial = _meshMaterial;
+
+        Vector3 pos = space.transform.position;
+        pos.z = _zPosition + 0.1f;
+        space.transform.position = pos;
     }
 
     private Vector2[] GenerateUv(Vector3[] vertices)

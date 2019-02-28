@@ -40,6 +40,11 @@ public class CellTrigger : MonoBehaviour
         _gameSession.CurrentZBuffer.OnChangeValue -= OnChangeZBuffer;
     }
 
+    public void Unscribe()
+    {
+        _gameSession.CurrentZBuffer.OnChangeValue -= OnChangeZBuffer;
+    }
+
     private void OnMouseUpAsButton()
     {
         if (this.FillState == CellStates.Empty)

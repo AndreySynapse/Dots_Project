@@ -8,12 +8,12 @@ public class ZBuffer
 
     public void Reset()
     {
-        this.Value = 0f;
+        this.Value = -1f;
     }
 
     public void ChangeValue()
     {
-        this.Value++;
+        this.Value--;
         OnChangeValue.SafeInvoke(this.Value);
     }
 }
